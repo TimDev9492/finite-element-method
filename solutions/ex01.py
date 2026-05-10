@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.axes import Axes
-from finite_differences.poisson import PoissonPDE
+from finite_differences.poisson import FiniteDifferencesPoisson
 from utils.common import evaluate_on_grid, time_function
 
 '''
@@ -15,17 +15,17 @@ the pde solution uses LU decomposition, which has the same runtime as the
 cholesky decomposition which is used in this implementation. Note that this
 is only possible because the discrete matrix -A_h is symmetric and positive definite.
 Both decompositions have a runtime of O(n^3). The other operations that are part of
-the PoissonPDE.solve() method have negligible runtime.
+the FiniteDifferencesPoisson.solve() method have negligible runtime.
 This would mean that increasing N by a factor of 10 from N=80 to N=800
 would increase the runtime by a factor of 10^3 = 1000. Using this approach
 would take quite a lot of time.
 
 Note that this code uses sparse matrices by default and solves the linear system
 using scipy's spsolve method which runs significantly faster, so N=800 is quite
-doable with this code. Dense matrices can be enable by using PoissonPDE(..., use_dense=True).
+doable with this code. Dense matrices can be enable by using FiniteDifferencesPoisson(..., use_dense=True).
 
 I also included an option to use the cg-method (conjugate gradient)
-to solve the system. See PoissonPDE.solve(use_cg=True)
+to solve the system. See FiniteDifferencesPoisson.solve(use_cg=True)
 '''
 
 def _test_problem_f(vec: Vector) -> np.ndarray | float:
@@ -63,7 +63,7 @@ def plot_finite_differences_problem(actual_ax: Axes3D, numerical_ax: Axes3D, N: 
     '''
     solution: ex01 (b)
     '''
-    pde = PoissonPDE(
+    pde = FiniteDifferencesPoisson(
         _test_problem_f,
         _test_problem_g,
         N
@@ -93,7 +93,7 @@ def convergence_plot(ax: Axes, N_s: list[int] = [10, 14, 20, 28, 40, 56, 80]):
     h_s = []
     max_errors = []
     for N in N_s:
-        pde = PoissonPDE(
+        pde = FiniteDifferencesPoisson(
             _test_problem_f,
             _test_problem_g,
             N

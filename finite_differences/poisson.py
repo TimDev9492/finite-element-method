@@ -1,10 +1,11 @@
 import utils.common as utils
 from utils.typing import Vector, Matrix, VecNumMap
+from pdes.poisson_pde import PoissonPDE
 
 import numpy as np
 import scipy.sparse as sparse
 
-class PoissonPDE():
+class FiniteDifferencesPoisson(PoissonPDE):
     '''
     This class holds all parameters needed to describe a poisson PDE of the form:
         -\\Delta u(x,y) = f(x,y)    for (x,y) \\in \\Omega = (0,1)^2
@@ -24,8 +25,7 @@ class PoissonPDE():
         dramatically speeds up computation time and reduces memory usage
         :type use_sparse: bool
         '''
-        self.f = f
-        self.g = g
+        super().__init__(f, g)
         self.N = N
         self.h = (b - a)/N
         self.a = a

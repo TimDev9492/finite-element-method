@@ -43,3 +43,6 @@ def time_function(func):
         return result
 
     return wrapper
+
+def triangle_area(p1: np.ndarray, p2: np.ndarray, p3: np.ndarray):
+    return 0.5 * np.linalg.norm(np.cross(p2 - p1, p3 - p1))

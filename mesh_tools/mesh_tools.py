@@ -11,7 +11,7 @@ class Triangulation:
         self._tri_idx = np.array(triangles, dtype=int)
         self._edges_dir = np.array(edges_dir, dtype=int)
         self._edges_neu = np.array(edges_neu, dtype=int)
-        self._outer_point_mask = self._compute_outer_points()
+        self._outer_point_mask = self._compute_outer_point_mask()
 
     def plot(self, plot = None):
         display = plot is None
@@ -34,15 +34,15 @@ class Triangulation:
         for polygon in self._tri_idx:
             for i in range(len(polygon)):
                 next_i = (i + 1) % len(polygon)
-                point_a = self._points[i]
-                point_b = self._points[next_i]
+                point_a = self._points[polygon[i]]
+                point_b = self._points[polygon[next_i]]
                 delta = point_b - point_a
-                dist_sqrd = delta[0]**2 + delta[1]**2
-                if dist_sqrd == -1 or dist_sqrd > longest_sqrd:
+                dist_sqrd = delta[0]*delta[0] + delta[1]*delta[1]
+                if longest_sqrd == -1 or dist_sqrd > longest_sqrd:
                     longest_sqrd = dist_sqrd
         return np.sqrt(longest_sqrd)
     
-    def _compute_outer_points(self):
+    def _compute_outer_point_mask(self):
         hull = ConvexHull(self._points)
         mask = np.zeros(len(self._points), dtype=bool)
         mask[hull.vertices] = True

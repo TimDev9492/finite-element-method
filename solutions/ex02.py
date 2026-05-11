@@ -83,7 +83,7 @@ def convergence_plot(ax: Axes, filename_template: str, mesh_numbers: range):
     draw_convergence_plot(ax, hmax_s, L2_errors, display_orders=[1, 2, 3], title='Convergence plot', xlabel='hmax', ylabel='L2 error', data_label='Linear FEM')
 
 def show_plots():
-    fig = plt.figure(figsize=(8, 8))
+    fig = plt.figure(figsize=(10, 8))
     gs = fig.add_gridspec(2, 2)
 
     top_left = fig.add_subplot(gs[0, 0], projection='3d')
@@ -97,6 +97,7 @@ def show_plots():
     convergence_plot(lower_row, filename_template='assets/meshes/ellipse{:02d}.msh', mesh_numbers=range(0, 10+1, 1))
 
     plt.tight_layout()
+    plt.savefig('figures/ex02.pdf')
     plt.show()
 
 show_plots()

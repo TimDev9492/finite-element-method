@@ -108,7 +108,7 @@ def convergence_plot(ax: Axes, N_s: list[int] = [10, 14, 20, 28, 40, 56, 80]):
     draw_convergence_plot(ax, h_s, max_errors, display_orders=[1, 2, 3], title='Convergence plot', xlabel='h', ylabel='Max error', data_label='Finite difference method')
 
 def show_plots():
-    fig = plt.figure(figsize=(8, 8))
+    fig = plt.figure(figsize=(10, 8))
     gs = fig.add_gridspec(2, 2)
 
     top_left = fig.add_subplot(gs[0, 0], projection='3d')
@@ -119,6 +119,7 @@ def show_plots():
     convergence_plot(lower_row, N_s=[10, 14, 20, 28, 40, 56, 80])
 
     plt.tight_layout()
+    plt.savefig('figures/ex01.pdf')
     plt.show()
 
 show_plots()

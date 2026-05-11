@@ -4,6 +4,7 @@ import time
 import numpy as np
 from scipy.sparse import diags, spmatrix
 from functools import wraps
+from matplotlib.axes import Axes
 
 def tridiag(upper_diag: np.ndarray, main_diag: np.ndarray, lower_diag: np.ndarray, dense: bool = True) -> np.ndarray | spmatrix:
     M = diags(
@@ -46,3 +47,28 @@ def time_function(func):
 
 def triangle_area(p1: np.ndarray, p2: np.ndarray, p3: np.ndarray):
     return 0.5 * np.linalg.norm(np.cross(p2 - p1, p3 - p1))
+
+def draw_convergence_plot(ax: Axes, x: np.ndarray | list[float], y: np.ndarray | list[float], display_orders=[1, 2, 3], title='Convergence plot', xlabel='x', ylabel='y', data_label='Data'):
+    # sort x first
+    idx = np.argsort(x)
+    x = np.array(x)[idx]
+    y = np.array(y)[idx]
+
+    # create loglog plot
+    ax.loglog(x, y, marker='x', linestyle='-', label=data_label)
+
+    # pick an anchor point (e.g. first point)
+    x0 = x[0]
+    y0 = y[0]
+
+    x_ref = np.array([x.min(), x.max()])
+
+    for order in display_orders:
+        C = y0 / (x0**order)
+        ax.loglog(x_ref, C * x_ref**(order), '--', label=f'O({xlabel}^{order})')
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    ax.grid(True, which='both', linestyle='--')
+    ax.legend()

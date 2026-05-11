@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.axes import Axes
 from finite_differences.poisson import FiniteDifferencesPoisson
-from utils.common import evaluate_on_grid, time_function
+from utils.common import evaluate_on_grid, time_function, draw_convergence_plot
 
 '''
 Notes on problem (d):
@@ -105,37 +105,7 @@ def convergence_plot(ax: Axes, N_s: list[int] = [10, 14, 20, 28, 40, 56, 80]):
         h_s.append(pde.h)
         max_errors.append(np.max(np.abs(actual - numerical)))
 
-    # sort h_s first
-    idx = np.argsort(h_s)
-    h_s = np.array(h_s)[idx]
-    max_errors = np.array(max_errors)[idx]
-
-    # create loglog plot
-    ax.loglog(h_s, max_errors, marker='o', linestyle='-', label='Finite difference method')
-
-    # pick an anchor point (e.g. first point)
-    h0 = h_s[0]
-    e0 = max_errors[0]
-
-    h_ref = np.array([h_s.min(), h_s.max()])
-
-    # slope 1 reference line: e = C * h
-    C1 = e0 / h0
-    ax.loglog(h_ref, C1 * h_ref, '--', label='O(h)')
-
-    # slope 2 reference line: e = C * h^2
-    C2 = e0 / (h0**2)
-    ax.loglog(h_ref, C2 * h_ref**2, '--', label='O(h^2)')
-
-    # slope 3 reference line: e = C * h^3
-    C2 = e0 / (h0**3)
-    ax.loglog(h_ref, C2 * h_ref**3, '--', label='O(h^3)')
-
-    ax.set_xlabel('h')
-    ax.set_ylabel('Max error')
-    ax.set_title('Convergence plot')
-    ax.grid(True, which='both', linestyle='--')
-    ax.legend()
+    draw_convergence_plot(ax, h_s, max_errors, display_orders=[1, 2, 3], title='Convergence plot', xlabel='h', ylabel='Max error', data_label='Finite difference method')
 
 def show_plots():
     fig = plt.figure(figsize=(8, 8))

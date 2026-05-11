@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.axes import Axes
 from finite_elements.poisson import LinearFEMPoissonPDE
-from utils.common import time_function, triangle_area
+from utils.common import time_function, triangle_area, draw_convergence_plot
 from mesh_tools.mesh_tools import Triangulation, read_msh
 
 def _test_problem_f(vec: Vector) -> np.ndarray | float:
@@ -80,37 +80,7 @@ def convergence_plot(ax: Axes, filename_template: str, mesh_numbers: range):
         L2_errors.append(approx_L2_error(pde, solution, numerical_solution))
         hmax_s.append(tri.get_hmax())
 
-    # sort hmax_s first
-    idx = np.argsort(hmax_s)
-    hmax_s = np.array(hmax_s)[idx]
-    L2_errors = np.array(L2_errors)[idx]
-
-    # create loglog plot
-    ax.loglog(hmax_s, L2_errors, marker='o', linestyle='-', label='Linear FEM')
-
-    # pick an anchor point (e.g. first point)
-    h0 = hmax_s[0]
-    e0 = L2_errors[0]
-
-    h_ref = np.array([hmax_s.min(), hmax_s.max()])
-
-    # slope 1 reference line: e = C * h
-    C1 = e0 / h0
-    ax.loglog(h_ref, C1 * h_ref, '--', label='O(h)')
-
-    # slope 2 reference line: e = C * h^2
-    C2 = e0 / (h0**2)
-    ax.loglog(h_ref, C2 * h_ref**2, '--', label='O(h^2)')
-
-    # slope 3 reference line: e = C * h^3
-    C2 = e0 / (h0**3)
-    ax.loglog(h_ref, C2 * h_ref**3, '--', label='O(h^3)')
-
-    ax.set_xlabel('h')
-    ax.set_ylabel('Max error')
-    ax.set_title('Convergence plot')
-    ax.grid(True, which='both', linestyle='--')
-    ax.legend()
+    draw_convergence_plot(ax, hmax_s, L2_errors, display_orders=[1, 2, 3], title='Convergence plot', xlabel='hmax', ylabel='L2 error', data_label='Linear FEM')
 
 def show_plots():
     fig = plt.figure(figsize=(8, 8))

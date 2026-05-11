@@ -1,6 +1,6 @@
-import utils.common as utils
-from utils.typing import Vector, Matrix, VecNumMap
-from pdes.poisson_pde import PoissonPDE
+import src.utils.common as utils
+from src.utils.typing import Vector, Matrix, VecNumMap
+from src.pdes.poisson_pde import PoissonPDE
 
 import numpy as np
 import scipy.sparse as sparse

@@ -1,4 +1,4 @@
-from utils.typing import VecNumMap
+from src.utils.typing import VecNumMap
 
 class PoissonPDE():
     '''

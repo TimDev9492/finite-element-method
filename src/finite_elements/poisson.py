@@ -1,9 +1,9 @@
 from typing import Tuple
-from utils.typing import VecNumMap, Vector
+from src.utils.typing import VecNumMap, Vector
 
-from utils.common import triangle_area
-from pdes.poisson_pde import PoissonPDE
-from mesh_tools.mesh_tools import Triangulation
+from src.utils.common import triangle_area
+from src.pdes.poisson_pde import PoissonPDE
+from src.mesh_tools.mesh_tools import Triangulation
 
 import numpy as np
 

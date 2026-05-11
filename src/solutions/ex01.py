@@ -1,11 +1,11 @@
-from utils.typing import Vector
+from src.utils.typing import Vector
 
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.axes import Axes
-from finite_differences.poisson import FiniteDifferencesPoisson
-from utils.common import evaluate_on_grid, time_function, draw_convergence_plot
+from src.finite_differences.poisson import FiniteDifferencesPoisson
+from src.utils.common import evaluate_on_grid, time_function, draw_convergence_plot
 
 '''
 Notes on problem (d):

@@ -1,12 +1,12 @@
-from utils.typing import Vector
+from src.utils.typing import Vector
 
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.axes import Axes
-from finite_elements.poisson import LinearFEMPoissonPDE
-from utils.common import time_function, triangle_area, draw_convergence_plot
-from mesh_tools.mesh_tools import Triangulation, read_msh
+from src.finite_elements.poisson import LinearFEMPoissonPDE
+from src.utils.common import time_function, triangle_area, draw_convergence_plot
+from src.mesh_tools.mesh_tools import Triangulation, read_msh
 
 def _test_problem_f(vec: Vector) -> np.ndarray | float:
     '''

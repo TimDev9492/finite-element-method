@@ -8,6 +8,21 @@ from src.finite_elements.poisson import LinearFEMPoissonPDE
 from src.utils.common import time_function, triangle_area, draw_convergence_plot
 from src.mesh_tools.mesh_tools import Triangulation, read_msh
 
+'''
+ex02 (d)
+
+The main computational cost is solving the linear system of equations (Maybe also
+assembling the matrix, i. e. iterating over all the triangles and computing the
+associated values). The maximum edge length cannot be upper-bounded by the number
+of triangles used. One could simply construct a triangulation by cramming a lot of
+tiny triangles into a small space and constructing one big triangle with long edges.
+Going the other way around, one could find a lower bound for the number of triangles
+needed to achieve a set maximum edge length. One simple method would be to use an equal
+grid spacing within the area and splitting every square into two triangles, however
+there are certainly more sophisticated methods. The method described above would yield
+a bound m >~ |Omega| / h^2
+'''
+
 def _test_problem_f(vec: Vector) -> np.ndarray | float:
     '''
     Helper function to describe right side of the poisson PDE

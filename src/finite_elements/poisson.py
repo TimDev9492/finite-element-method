@@ -8,6 +8,10 @@ from src.mesh_tools.mesh_tools import Triangulation
 import numpy as np
 
 class LinearFEMPoissonPDE(PoissonPDE):
+    '''
+    This class holds all values and parameters needed to describe
+    and solve the poisson PDE using the linear finite element method
+    '''
     def __init__(self, f: VecNumMap, triang: Triangulation):
         super().__init__(f, lambda v: 0)
         self.triang = triang
@@ -15,6 +19,9 @@ class LinearFEMPoissonPDE(PoissonPDE):
         self.m = len(triang._tri_idx)
 
     def _compute_A_b(self) -> Tuple[np.ndarray, np.ndarray]:
+        '''
+        Compute matrix A and vector b to solve Ax=b
+        '''
         b = np.zeros((self.N, 1))
         A = np.zeros((self.N, self.N))
         for k in range(self.m):
@@ -53,6 +60,11 @@ class LinearFEMPoissonPDE(PoissonPDE):
         return (A, b)
     
     def solve(self) -> Vector:
+        '''
+        Compute the solution using np.linalg.solve
+
+        Note: Can be optimized by using sparse matrix A and cg-method for example
+        '''
         A, b = self._compute_A_b()
 
         # enforce dirichlet boundary conditions

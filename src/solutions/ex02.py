@@ -10,19 +10,25 @@ from src.mesh_tools.mesh_tools import Triangulation, read_msh
 
 def _test_problem_f(vec: Vector) -> np.ndarray | float:
     '''
-    Helper function to describe right side off poisson PDE
+    Helper function to describe right side of the poisson PDE
     '''
     vec = np.asarray(vec)
     x, y = vec[0], vec[1]
     return 15*x*y*(1 - 0.25*x*x - y*y) - 0.5*x*x*x*y - 8*x*y*y*y
 
 def _test_problem_u(vec: Vector) -> np.ndarray:
+    '''
+    Theoretical solution for the test problem
+    '''
     vec = np.asarray(vec)
     x = vec[..., 0]
     y = vec[..., 1]
     return x*y*(1 - 0.25*x*x - y*y)**2
 
 def approx_L2_error(pde: LinearFEMPoissonPDE, solution: np.ndarray, numerical_solution: np.ndarray) -> float:
+    '''
+    Calculate the approximation for the error in the L2 norm by using quadrature formula
+    '''
     # approximate the error using a quadrature formula
     approx_error = 0
     for k in range(pde.m):

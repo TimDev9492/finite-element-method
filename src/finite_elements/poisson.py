@@ -29,32 +29,32 @@ class LinearFEMPoissonPDE(PoissonPDE):
             points = self.triang._points[global_point_idx]
             center = (points[0] + points[1] + points[2]) / 3
             tri_area = triangle_area(points[0], points[1], points[2])
+            # compute a_k
+            x = points[:, 0]
+            y = points[:, 1]
+            # compute alphas, betas and gammas by inverting the matrix
+            # [
+            #   1  x[0]  y[0]
+            #   1  x[1]  y[1]
+            #   1  x[2]  y[2]
+            # ]
+            # using cramer's rule
+            det_point_matrix = x[1]*y[2] + x[0]*y[1] + x[2]*y[0] - x[1]*y[0] - x[2]*y[1] - x[0]*y[2]
+            betas = [
+                -1 / det_point_matrix * (y[2] - y[1]),
+                +1 / det_point_matrix * (y[2] - y[0]),
+                -1 / det_point_matrix * (y[1] - y[0]),
+            ]
+            gammas = [
+                +1 / det_point_matrix * (x[2] - x[1]),
+                -1 / det_point_matrix * (x[2] - x[0]),
+                +1 / det_point_matrix * (x[1] - x[0]),
+            ]
             for i in range(3):
                 # compute b_k
                 b_i_k = tri_area / 3 * self.f(center)
                 b[global_point_idx[i]] += b_i_k
                 for j in range(3):
-                    # compute a_k
-                    x = points[:, 0]
-                    y = points[:, 1]
-                    # compute alphas, betas and gammas by inverting the matrix
-                    # [
-                    #   1  x[0]  y[0]
-                    #   1  x[1]  y[1]
-                    #   1  x[2]  y[2]
-                    # ]
-                    # using cramer's rule
-                    det_point_matrix = x[1]*y[2] + x[0]*y[1] + x[2]*y[0] - x[1]*y[0] - x[2]*y[1] - x[0]*y[2]
-                    betas = [
-                        -1 / det_point_matrix * (y[2] - y[1]),
-                        +1 / det_point_matrix * (y[2] - y[0]),
-                        -1 / det_point_matrix * (y[1] - y[0]),
-                    ]
-                    gammas = [
-                        +1 / det_point_matrix * (x[2] - x[1]),
-                        -1 / det_point_matrix * (x[2] - x[0]),
-                        +1 / det_point_matrix * (x[1] - x[0]),
-                    ]
                     a_ij_k = tri_area * (betas[i] * betas[j] + gammas[i] * gammas[j])
                     A[global_point_idx[i], global_point_idx[j]] += a_ij_k
         return (A, b)
@@ -79,4 +79,5 @@ class LinearFEMPoissonPDE(PoissonPDE):
 
         v = np.linalg.solve(A, b)
 
+        # return vector as 1D-array, not as column vector
         return v.reshape(v.shape[0],)

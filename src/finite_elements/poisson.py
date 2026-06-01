@@ -75,7 +75,7 @@ class LinearFEMPoissonPDE(PoissonPDE):
         A[boundary_idx, :] = 0
         A[:, boundary_idx] = 0
         A[boundary_idx, boundary_idx] = 1
-        b[boundary_idx] = self.g(self.triang._points[boundary_idx])
+        b[boundary_idx] = 0
 
         v = np.linalg.solve(A, b)
 

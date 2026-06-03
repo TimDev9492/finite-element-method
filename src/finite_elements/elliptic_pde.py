@@ -2,12 +2,11 @@ from typing import Tuple, Callable
 from src.utils.typing import VecNumMap, Vec2NumMap, Vector, VecMatrixMap
 
 from src.utils.common import triangle_area
-from src.finite_elements.poisson import LinearFEMPoissonPDE
 from src.mesh_tools.mesh_tools import Triangulation
 
 import numpy as np
 
-class LinearFEMEllipticPDE(LinearFEMPoissonPDE):
+class LinearFEMEllipticPDE:
     '''
     This class holds all values and parameters needed to describe
     and solve general elliptic PDEs using the linear finite element method
@@ -24,7 +23,11 @@ class LinearFEMEllipticPDE(LinearFEMPoissonPDE):
             g_dir: VecNumMap = lambda v: 0,
             g_neu: Vec2NumMap = lambda u, v: 0,
     ):
-        super().__init__(f, triang)
+        self.f = f
+        self.triang = triang
+        self.N = len(triang._points)
+        self.m = len(triang._tri_idx)
+
         self.kappa = kappa
         self.kappa_zero = kappa_zero
         self.g_dir = g_dir

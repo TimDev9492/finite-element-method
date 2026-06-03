@@ -8,3 +8,4 @@ Matrix = np.ndarray | spmatrix
 VecVecMap = Callable[[Vector], Vector]
 VecNumMap = Callable[[Vector], float | np.ndarray]
 NumVecMap = Callable[[float], Vector]
+VecMatrixMap = Callable[[Vector], Matrix]

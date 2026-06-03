@@ -9,3 +9,5 @@ while IFS= read -r file; do
     echo "Freezing $file -> $out"
     freeze --theme dracula "$file" -o "$OUT/$out" < /dev/null
 done < <(find "$SRC" -name "*.py" ! -name "__init__.py")
+
+inkscape "${OUT}/*.svg" --export-type=pdf --export-area-page

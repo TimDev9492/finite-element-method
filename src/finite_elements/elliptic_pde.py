@@ -1,5 +1,5 @@
 from typing import Tuple, Callable
-from src.utils.typing import VecNumMap, Vector, VecMatrixMap
+from src.utils.typing import VecNumMap, Vec2NumMap, Vector, VecMatrixMap
 
 from src.utils.common import triangle_area
 from src.finite_elements.poisson import LinearFEMPoissonPDE
@@ -7,11 +7,10 @@ from src.mesh_tools.mesh_tools import Triangulation
 
 import numpy as np
 
-# TODO: rename
-class LinearFEMPoissonPDEVariational(LinearFEMPoissonPDE):
+class LinearFEMEllipticPDE(LinearFEMPoissonPDE):
     '''
     This class holds all values and parameters needed to describe
-    and solve the poisson PDE using the linear finite element method
+    and solve general elliptic PDEs using the linear finite element method
 
     IMPORTANT: g_neu takes in two points and should return the expression
     evaluated at the midpoint!
@@ -23,7 +22,7 @@ class LinearFEMPoissonPDEVariational(LinearFEMPoissonPDE):
             kappa: VecMatrixMap = lambda v: np.ones(3),
             kappa_zero: VecNumMap = lambda v: 0,
             g_dir: VecNumMap = lambda v: 0,
-            g_neu: Callable[[Vector, Vector], float] = lambda u, v: 0,
+            g_neu: Vec2NumMap = lambda u, v: 0,
     ):
         super().__init__(f, triang)
         self.kappa = kappa
@@ -79,21 +78,24 @@ class LinearFEMPoissonPDEVariational(LinearFEMPoissonPDE):
                 # compute b_k
                 b_i_k = T_area[k] / 3 * self.f(center)
                 # if no triangle vertex is in dirichlet points
-                if (tf_mask_dirichlet := np.isin(global_point_idx, P_dirichlet)).sum() == 0:
+                if (tf_mask_dirichlet := np.isin(global_point_idx, P_dirichlet)).sum() >= 1:
                     for j in range(len(tf_mask_dirichlet)):
-                        if tf_mask_dirichlet[i]:
+                        if tf_mask_dirichlet[j]:
                             b_i_k -= self.g_dir(points[j])*a_i[j]
                 
                 tf_mask_neumann = np.isin(global_point_idx, P_neumann)
                 # check if at least two vertices neumann edge adjacent
                 if tf_mask_neumann.sum() >= 2:
                     for (m, n) in [(0,1), (1,2), (0,2)]:
+                        if not (i == m or i == n):
+                            continue
+                        gm, gn = global_point_idx[m], global_point_idx[n]
                         # check if edge nodes are both neumann
                         if tf_mask_neumann[m] and tf_mask_neumann[n]:
                             # check if edge is neumann
                             if np.any(
-                                ((self.triang._edges_neu[:, 0] == m) & (self.triang._edges_neu[:, 1] == n)) |
-                                ((self.triang._edges_neu[:, 0] == n) & (self.triang._edges_neu[:, 1] == m))
+                                ((self.triang._edges_neu[:, 0] == gm) & (self.triang._edges_neu[:, 1] == gn)) |
+                                ((self.triang._edges_neu[:, 0] == gn) & (self.triang._edges_neu[:, 1] == gm))
                             ):
                                 b_i_k += 0.5*np.linalg.norm(points[m] - points[n])*self.g_neu(points[m], points[n])
 
@@ -120,5 +122,9 @@ class LinearFEMPoissonPDEVariational(LinearFEMPoissonPDE):
 
         v = np.linalg.solve(A, b)
 
+        # add dirichlet values on the boundary back in
+        v[boundary_idx, 0] = np.array([self.g_dir(self.triang._points[i]) for i in boundary_idx])
+
         # return vector as 1D-array, not as column vector
+        # (b gets initialized with shape (n, 1) in _compute_A_b)
         return v.reshape(v.shape[0],)

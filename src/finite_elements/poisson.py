@@ -24,11 +24,13 @@ class LinearFEMPoissonPDE(PoissonPDE):
         '''
         b = np.zeros((self.N, 1))
         A = np.zeros((self.N, self.N))
+        T_area = np.empty(self.m)
+        
         for k in range(self.m):
             global_point_idx = self.triang._tri_idx[k]
             points = self.triang._points[global_point_idx]
             center = (points[0] + points[1] + points[2]) / 3
-            tri_area = triangle_area(points[0], points[1], points[2])
+            T_area[k] = triangle_area(points[0], points[1], points[2])
             # compute a_k
             x = points[:, 0]
             y = points[:, 1]
@@ -52,10 +54,10 @@ class LinearFEMPoissonPDE(PoissonPDE):
             ]
             for i in range(3):
                 # compute b_k
-                b_i_k = tri_area / 3 * self.f(center)
+                b_i_k = T_area[k] / 3 * self.f(center)
                 b[global_point_idx[i]] += b_i_k
                 for j in range(3):
-                    a_ij_k = tri_area * (betas[i] * betas[j] + gammas[i] * gammas[j])
+                    a_ij_k = T_area[k] * (betas[i] * betas[j] + gammas[i] * gammas[j])
                     A[global_point_idx[i], global_point_idx[j]] += a_ij_k
         return (A, b)
     

@@ -3,7 +3,7 @@ from src.utils.typing import Vector, VecNumMap, Vec2NumMap
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from src.finite_elements.elliptic_pde import LinearFEMEllipticPDE
+from src.finite_elements.elliptic_pde_linear import LinearFEMEllipticPDE
 from src.utils.common import triangle_area
 from src.mesh_tools.mesh_tools import Triangulation, read_msh
 

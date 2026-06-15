@@ -1,5 +1,8 @@
 import numpy as np
-from mesh_tools.mesh_tools import read_msh
+from src.mesh_tools.mesh_tools import read_msh, TriangulationQuad
 
-T = read_msh('assets/meshes/circular_ring_coarse_out_DIR_inn_DIR.msh')
+T = read_msh('assets/meshes/ellipse00.msh')
+QT = TriangulationQuad.from_triangulation(T)
+
 T.plot()
+QT.plot()

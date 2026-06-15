@@ -136,7 +136,7 @@ def plot_finite_elements_problem(
         # create exact solution plot
         solution = _test_problem_u(solution_triang._points)
         x, y = solution_triang._points[:, 0], solution_triang._points[:, 1]
-        actual_ax.plot_trisurf(x, y, solution, cmap='viridis')
+        actual_ax.plot_trisurf(x, y, solution_triang._tri_idx, solution, cmap='viridis')
         actual_ax.set_title("Actual solution")
 
     for numerical_ax, title, triang in zip(numerical_axes, plot_titles, triangs):
@@ -154,7 +154,7 @@ def plot_finite_elements_problem(
         numerical_solution = pde.solve()
 
         x, y = triang._points[:, 0], triang._points[:, 1]
-        numerical_ax.plot_trisurf(x, y, numerical_solution, cmap='viridis')
+        numerical_ax.plot_trisurf(x, y, pde.triang._tri_idx, numerical_solution, cmap='viridis')
         numerical_ax.set_title(title)
 
         if solution is not None:

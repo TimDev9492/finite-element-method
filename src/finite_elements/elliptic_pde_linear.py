@@ -18,7 +18,7 @@ class LinearFEMEllipticPDE:
             self,
             f: VecNumMap,
             triang: Triangulation,
-            kappa: VecMatrixMap = lambda v: np.ones(3),
+            kappa: VecMatrixMap = lambda v: np.eye(2),
             kappa_zero: VecNumMap = lambda v: 0,
             g_dir: VecNumMap = lambda v: 0,
             g_neu: Vec2NumMap = lambda u, v: 0,

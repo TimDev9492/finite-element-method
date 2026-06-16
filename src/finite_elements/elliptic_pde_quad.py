@@ -16,9 +16,7 @@ class QuadraticFEMEllipticPDE:
             self,
             f: VecNumMap,
             triang: TriangulationQuad,
-            # TODO: fix matrix not vector output
-            kappa: VecMatrixMap = lambda v: np.ones(3),
-            kappa_zero: VecNumMap = lambda v: 0,
+            kappa: VecMatrixMap = lambda v: np.eye(2),
             g_dir: VecNumMap = lambda v: 0,
     ):
         self.f = f
@@ -27,7 +25,6 @@ class QuadraticFEMEllipticPDE:
         self.m = len(triang._tri_idx)
 
         self.kappa = kappa
-        self.kappa_zero = kappa_zero
         self.g_dir = g_dir
 
         # store points for quadrature fromula
@@ -64,7 +61,7 @@ class QuadraticFEMEllipticPDE:
         '''
         Compute matrix A and vector b to solve Ax=b
         '''
-        b = np.zeros((self.N, 1))
+        b = np.zeros(self.N)
         A = np.zeros((self.N, self.N))
 
         # calculate phi_hat d_r phi and d_s phi
@@ -84,6 +81,8 @@ class QuadraticFEMEllipticPDE:
             [0, 0, 1, 0, self.xi_eta[2, 0], 2*self.xi_eta[2, 1]],
         ]))
 
+        P_dirichlet = np.unique(self.triang._edges_dir)
+
         for k in range(self.m):
             global_point_idx = self.triang._tri_idx[k]
             points = self.triang._points[global_point_idx]
@@ -91,22 +90,25 @@ class QuadraticFEMEllipticPDE:
             x = points[:, 0]
             y = points[:, 1]
 
-            det_Jk = (x[1] - x[0])*(y[2] - y[0]) - (y[1] - y[0])*(x[2] - x[0])
-
             Phi_k_of_xi_eta = np.array([
                 points[0] + (points[1] - points[0])*self.xi_eta[0, 0] + (points[2] - points[0])*self.xi_eta[0, 1],
                 points[0] + (points[1] - points[0])*self.xi_eta[1, 0] + (points[2] - points[0])*self.xi_eta[1, 1],
                 points[0] + (points[1] - points[0])*self.xi_eta[2, 0] + (points[2] - points[0])*self.xi_eta[2, 1],
             ])
 
+            det_Jk = (x[1] - x[0])*(y[2] - y[0]) - (y[1] - y[0])*(x[2] - x[0])
             Jk_inv_T = 1 / det_Jk * np.array([
                 [y[2] - y[0], y[0] - y[1]],
                 [x[0] - x[2], x[1] - x[0]],
             ])
 
-            for i in range(3):
-                for j in range(3):
-                    a_ij_k = det_Jk / 6 * (
+            a_k = np.zeros((6, 6))
+            for i in range(6):
+                b_i_k = 0
+                tf_mask_dirichlet = np.isin(global_point_idx, P_dirichlet)
+                for j in range(6):
+                    # compute contribution to assembly matrix A
+                    a_ij_k = abs(det_Jk) / 6 * (
                         np.dot(
                             Jk_inv_T @ np.array([dr_phi[0, i], ds_phi[0, i]]),
                             self.kappa(Phi_k_of_xi_eta[0]) @ Jk_inv_T @ np.array([dr_phi[0, j], ds_phi[0, j]])
@@ -120,15 +122,25 @@ class QuadraticFEMEllipticPDE:
                             self.kappa(Phi_k_of_xi_eta[2]) @ Jk_inv_T @ np.array([dr_phi[2, j], ds_phi[2, j]])
                             )
                     )
+                    a_k[i, j] = a_k[i, j] = a_ij_k
                     A[global_point_idx[i], global_point_idx[j]] += a_ij_k
 
+                    # subtract correction term for dirichlet boundary condition
+                    # (swapped indices compared to script!)
+                    # computes a^k(u_star, phi^k_i) with loop over j
+                    if tf_mask_dirichlet[j]:
+                        b_i_k -= self.g_dir(points[j]) * a_k[j, i]
+
                 # compute b_k
-                b_i_k = det_Jk / 6 * (
+                b_i_k += abs(det_Jk) / 6 * (
                                 self.f(Phi_k_of_xi_eta[0]) * phi[0, i] + 
                                 self.f(Phi_k_of_xi_eta[1]) * phi[1, i] +
                                 self.f(Phi_k_of_xi_eta[2]) * phi[2, i]
-                            ) # leave out correction on dirichlet boundary because those entries get
-                              # removed from the matrix anyways
+                            )
+
+                # if tf_mask_dirichlet.sum() >= 1:
+                #     b_i_k -= np.dot(self.g_dir(points) * a_k[:, i], tf_mask_dirichlet)
+
                 b[global_point_idx[i]] += b_i_k
 
         return (A, b)
@@ -142,19 +154,29 @@ class QuadraticFEMEllipticPDE:
         A, b = self._compute_A_b()
 
         # enforce dirichlet boundary conditions
-        # by setting columns and rows of dirichlet
-        # nodes to zero
+        # by removing cols and rows from matrix,
+        # and re-inserting them afterwards
         boundary_idx = np.unique(self.triang._edges_dir)
-        A[boundary_idx, :] = 0
-        A[:, boundary_idx] = 0
-        A[boundary_idx, boundary_idx] = 1
-        b[boundary_idx] = 0
+        interior_mask = np.ones(self.N, dtype=bool)
+        interior_mask[boundary_idx] = False
+        interior_idx = np.where(interior_mask)[0]
 
-        v = np.linalg.solve(A, b)
+        boundary_values = np.array([self.g_dir(self.triang._points[i]) for i in boundary_idx])
+
+        A_ii = A[np.ix_(interior_idx, interior_idx)]
+        A_ib = A[np.ix_(interior_idx, boundary_idx)]
+
+        # remove boundary nodes
+        # b_reduced = b[interior_idx] - A_ib @ boundary_values
+        b_reduced = b[interior_idx]
+
+        # solve reduced system
+        u_interior = np.linalg.solve(A_ii, b_reduced)
+
+        u = np.empty(self.N)
+        u[interior_idx] = u_interior
 
         # add dirichlet values on the boundary back in
-        v[boundary_idx, 0] = np.array([self.g_dir(self.triang._points[i]) for i in boundary_idx])
+        u[boundary_idx] = boundary_values
 
-        # return vector as 1D-array, not as column vector
-        # (b gets initialized with shape (n, 1) in _compute_A_b)
-        return v.reshape(v.shape[0],)
+        return u

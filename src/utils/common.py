@@ -48,14 +48,14 @@ def time_function(func):
 def triangle_area(p1: np.ndarray, p2: np.ndarray, p3: np.ndarray):
     return 0.5 * np.linalg.norm(np.cross(p2 - p1, p3 - p1))
 
-def draw_convergence_plot(ax: Axes, x: np.ndarray | list[float], y: np.ndarray | list[float], display_orders=[1, 2, 3], title='Convergence plot', xlabel='x', ylabel='y', data_label='Data'):
+def draw_convergence_plot(ax: Axes, x: np.ndarray | list[float], y: np.ndarray | list[float], display_orders=[1, 2, 3], title='Convergence plot', xlabel='x', ylabel='y', data_label='Data', color='blue'):
     # sort x first
     idx = np.argsort(x)
     x = np.array(x)[idx]
     y = np.array(y)[idx]
 
     # create loglog plot
-    ax.loglog(x, y, marker='x', linestyle='-', label=data_label)
+    ax.loglog(x, y, marker='x', linestyle='-', label=data_label, color=color)
 
     # pick an anchor point (e.g. first point)
     x0 = x[0]

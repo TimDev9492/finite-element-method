@@ -10,4 +10,7 @@ while IFS= read -r file; do
     freeze --theme dracula "$file" -o "$OUT/$out" < /dev/null
 done < <(find "$SRC" -name "*.py" ! -name "__init__.py")
 
-inkscape "${OUT}/*.svg" --export-type=pdf --export-area-page
+inkscape "${OUT}"/*.svg --export-type=pdf --export-area-page
+
+# merge pdf files using
+#  pdfunite file1.pdf file2.pdf file3.pdf output.pdf

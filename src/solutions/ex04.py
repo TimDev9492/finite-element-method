@@ -9,18 +9,14 @@ from src.finite_elements.elliptic_pde_linear import LinearFEMEllipticPDE
 from src.finite_elements.elliptic_pde_quad import QuadraticFEMEllipticPDE
 from src.utils.common import triangle_area
 from src.mesh_tools.mesh_tools import Triangulation, TriangulationQuad, read_msh
-from src.utils.common import draw_convergence_plot
+from src.utils.common import draw_convergence_plot, time_function
 
 '''
 ex04 (g):
-One could simply treat the midpoints of boundary edges as points on the boundary
-themselves (would require modification to the TriangulationQuad class to keep track
-of boundary midpoints). When comparing that result to the real solution, one would get
-a much larger error because the underlying function could have drastically different
-outputs around the boundary than on the boundary itself. The error plot would thus be
-much worse, however a finer triangulation would also reduce the distance of those midpoints
-from the actual boundary, at the cost of more of these points. Depending on the underlying
-function, these two effects could cancel out, they could also eliminate each other.
+You could simply treat the midpoints of the boundary edges as edges on the boundary
+themselves, however the evaluated g_dir on those points would be inaccurate and
+cause larger errors in the computed solution. The error plot changes to an order
+of convergence similar to linear FEM (around 2).
 '''
 
 def approx_L2_error_linear(pde: LinearFEMEllipticPDE, solution: np.ndarray, numerical_solution: np.ndarray) -> float:
@@ -46,7 +42,6 @@ def approx_L2_error_quad(pde: QuadraticFEMEllipticPDE, solution: np.ndarray, num
         vertex_idx = tri_idx[:3]
         midpoint_idx = tri_idx[3:]
         vertices = pde.triang._points[vertex_idx]
-        midpoints = pde.triang._points[midpoint_idx]
         residuals_squared = (solution[midpoint_idx] - numerical_solution[midpoint_idx])**2
         approx_error += triangle_area(vertices[0], vertices[1], vertices[2]) / 3 * np.sum(residuals_squared)
     return np.sqrt(approx_error)
@@ -63,8 +58,6 @@ def _test_problem_kappa(vec: Vector) -> np.ndarray:
         [a, b],
         [b, a]
     ])
-# def _test_problem_kappa(vec: Vector) -> np.ndarray:
-#     return np.eye(2)
 
 def _test_problem_kappa_zero(vec: Vector) -> float:
     return 0
@@ -76,12 +69,6 @@ def _test_problem_f(vec: Vector) -> np.ndarray | float:
     vec = np.asarray(vec)
     x, y = vec[0], vec[1]
     return 6 - 12*x*y*np.exp(-x*x - y*y)
-# def _test_problem_f(vec: Vector) -> np.ndarray | float:
-#     return -4
-# def _test_problem_f(vec: Vector) -> np.ndarray | float:
-#     vec = np.asarray(vec)
-#     x, y = vec[..., 0], vec[..., 1]
-#     return 16*(x*x + y*y) - 5
 
 def _test_problem_g_dir(vec: Vector) -> np.ndarray | float:
     # vec = np.asarray(vec)
@@ -95,17 +82,6 @@ def _test_problem_g_dir(vec: Vector) -> np.ndarray | float:
     #     np.exp(-x*x - 0.25)
     # )
     return _test_problem_u(vec)
-# def _test_problem_g_dir(vec: Vector) -> np.ndarray | float:
-#     vec = np.asarray(vec)
-#     x, y = vec[..., 0], vec[..., 1]
-#     on_gamma_1 = np.isclose(x*x + y*y, 1)
-#     return np.where(
-#         on_gamma_1,
-#         1,
-#         0.25
-#     )
-# def _test_problem_g_dir(vec: Vector) -> np.ndarray | float:
-#     return 0
 
 def _test_problem_u(vec: Vector) -> np.ndarray:
     '''
@@ -115,16 +91,6 @@ def _test_problem_u(vec: Vector) -> np.ndarray:
     x = vec[..., 0]
     y = vec[..., 1]
     return np.exp(-2*x*x - y*y)
-# def _test_problem_u(vec: Vector) -> np.ndarray:
-#     vec = np.asarray(vec)
-#     x = vec[..., 0]
-#     y = vec[..., 1]
-#     return x*x + y*y
-# def _test_problem_u(vec: Vector) -> np.ndarray:
-#     vec = np.asarray(vec)
-#     x = vec[..., 0]
-#     y = vec[..., 1]
-#     return (x*x + y*y - 0.25) * (1 - x*x - y*y)
 
 def plot_finite_elements_problem(
         actual_ax: Axes3D,
@@ -152,7 +118,7 @@ def plot_finite_elements_problem(
     linear_solution = linear_solver.solve()
     linear_ax.plot_trisurf(x, y, triang._tri_idx, linear_solution, cmap='viridis')
     linear_ax.set_title("Linear FEM")
-    print(f"Approximate error for linear FEM: {approx_L2_error_linear(linear_solver, solution, linear_solution)}")
+    print(f"Approximate error for linear FEM: {approx_L2_error_linear(linear_solver, solution, linear_solution):.3e}")
 
     # create quadratic FEM solution plot
     quad_triang = TriangulationQuad.from_triangulation(triang)
@@ -161,12 +127,13 @@ def plot_finite_elements_problem(
         quad_triang,
         _test_problem_kappa,
         _test_problem_g_dir,
+        use_sparse=True,
     )
     solution = _test_problem_u(quad_triang._points)
     quadratic_solution = quadratic_solver.solve()
     quad_ax.plot_trisurf(quad_triang._points[:, 0], quad_triang._points[:, 1], quad_triang._tri_idx[:, :3], quadratic_solution, cmap='viridis')
     quad_ax.set_title("Quadratic FEM")
-    print(f"Approximate error for quadratic FEM: {approx_L2_error_quad(quadratic_solver, solution, quadratic_solution)}")
+    print(f"Approximate error for quadratic FEM: {approx_L2_error_quad(quadratic_solver, solution, quadratic_solution):.3e}")
 
 def compute_conv_work_prec(paths: list[str], conv_ax: Axes, work_prec_ax: Axes):
     '''
@@ -212,7 +179,8 @@ def compute_conv_work_prec(paths: list[str], conv_ax: Axes, work_prec_ax: Axes):
             _test_problem_f,
             quad_triang,
             _test_problem_kappa,
-            _test_problem_g_dir
+            _test_problem_g_dir,
+            use_sparse=True,
         )
         start = perf_counter_ns()
         quad_solution = quad_solver.solve()
@@ -222,6 +190,7 @@ def compute_conv_work_prec(paths: list[str], conv_ax: Axes, work_prec_ax: Axes):
             solution=_test_problem_u(quad_triang._points),
             numerical_solution=quad_solution,
             ))
+    
 
         linear_slope = quadratic_slope = None
         if len(hmax) > 1:
@@ -245,7 +214,7 @@ def compute_conv_work_prec(paths: list[str], conv_ax: Axes, work_prec_ax: Axes):
         conv_ax,
         hmax,
         linear_errors,
-        display_orders=[],
+        display_orders=[2, 3],
         title='Convergence plot',
         xlabel='hmax',
         ylabel='L2 error',
@@ -255,7 +224,7 @@ def compute_conv_work_prec(paths: list[str], conv_ax: Axes, work_prec_ax: Axes):
         conv_ax,
         hmax,
         quad_errors,
-        display_orders=[1, 2, 3],
+        display_orders=[3, 4],
         title='Convergence plot',
         xlabel='hmax',
         ylabel='L2 error',
@@ -286,6 +255,7 @@ def compute_conv_work_prec(paths: list[str], conv_ax: Axes, work_prec_ax: Axes):
         color='red',
     )
 
+@time_function
 def show_plots():
     fig = plt.figure(figsize=(14, 4))
     gs = fig.add_gridspec(1, 3)
@@ -312,13 +282,16 @@ def show_plots():
     work_prec_plot = fig.add_subplot(gs[1, 0])
 
     compute_conv_work_prec(
-        [f'assets/meshes/circular_ring_{no:02d}.msh' for no in range(7)],
+        # implementation allows for loading all meshes, runtime on my machine:
+        #  - meshes 00 to 06: ~36s  (half a minute)
+        #  - meshes 00 to 08: ~195s (3+ minutes)
+        [f'assets/meshes/circular_ring_{no:02d}.msh' for no in range(6+1)],
         conv_plot,
         work_prec_plot,
     )
 
     plt.tight_layout()
     plt.savefig('figures/ex04ef.pdf')
-    plt.show()
+    # plt.show()
 
 show_plots()

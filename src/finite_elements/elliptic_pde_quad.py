@@ -1,5 +1,5 @@
 from typing import Tuple, Callable
-from src.utils.typing import VecNumMap, Vec2NumMap, Vector, VecMatrixMap, Matrix
+from src.utils.typing import VecNumMap, Vector, VecMatrixMap
 
 from src.utils.common import time_function
 from src.mesh_tools.mesh_tools import TriangulationQuad
@@ -62,7 +62,6 @@ class QuadraticFEMEllipticPDE:
             np.linalg.solve(self.Z.T, A[2, :])
         ])
 
-    @time_function
     def _compute_A_b(self) -> Tuple[sparse.csr_array | np.ndarray, np.ndarray]:
         '''
         Compute matrix A and vector b to solve Ax=b
@@ -164,8 +163,7 @@ class QuadraticFEMEllipticPDE:
             A = A.tocsr()
         return (A, b)
     
-    @time_function
-    def solve(self, use_preconditioner=True) -> Vector:
+    def solve(self) -> Vector:
         '''
         Compute the solution
         '''
@@ -194,11 +192,7 @@ class QuadraticFEMEllipticPDE:
         if not self.use_sparse:
             u_interior = np.linalg.solve(A_ii, b_reduced)
         elif isinstance(A_ii, sparse.csr_matrix):
-            M = None
-            if use_preconditioner:
-                ilu = spilu(A_ii.tocsc())
-                M = LinearOperator(A_ii.shape, ilu.solve)
-            u_interior, info = cg(A_ii, b_reduced, M=M, rtol=1e-10)
+            u_interior, info = cg(A_ii, b_reduced, rtol=1e-10)
             if info != 0:
                 raise RuntimeError(f"CG failed with info={info}")
 

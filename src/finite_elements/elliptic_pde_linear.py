@@ -5,6 +5,8 @@ from src.utils.common import triangle_area
 from src.mesh_tools.mesh_tools import Triangulation
 
 import numpy as np
+import scipy.sparse as sparse
+from scipy.sparse.linalg import cg
 
 class LinearFEMEllipticPDE:
     '''
@@ -22,6 +24,7 @@ class LinearFEMEllipticPDE:
             kappa_zero: VecNumMap = lambda v: 0,
             g_dir: VecNumMap = lambda v: 0,
             g_neu: Vec2NumMap = lambda u, v: 0,
+            use_sparse: bool = False,
     ):
         self.f = f
         self.triang = triang
@@ -33,12 +36,14 @@ class LinearFEMEllipticPDE:
         self.g_dir = g_dir
         self.g_neu = g_neu
 
-    def _compute_A_b(self) -> Tuple[np.ndarray, np.ndarray]:
+        self.use_sparse = use_sparse
+
+    def _compute_A_b(self) -> Tuple[sparse.csr_array | np.ndarray, np.ndarray]:
         '''
         Compute matrix A and vector b to solve Ax=b
         '''
-        b = np.zeros((self.N, 1))
-        A = np.zeros((self.N, self.N))
+        b = np.zeros(self.N)
+        A = sparse.lil_matrix((self.N, self.N)) if self.use_sparse else np.zeros((self.N, self.N))
         T_area = np.empty(self.m)
 
         P_dirichlet = np.unique(self.triang._edges_dir)
@@ -103,7 +108,9 @@ class LinearFEMEllipticPDE:
                                 b_i_k += 0.5*np.linalg.norm(points[m] - points[n])*self.g_neu(points[m], points[n])
 
                 b[global_point_idx[i]] += b_i_k
-
+        
+        if isinstance(A, sparse.lil_matrix):
+            A = A.tocsr()
         return (A, b)
     
     def solve(self) -> Vector:
@@ -123,11 +130,18 @@ class LinearFEMEllipticPDE:
         A[boundary_idx, boundary_idx] = 1
         b[boundary_idx] = 0
 
-        v = np.linalg.solve(A, b)
+        v = None
+        if not self.use_sparse:
+            if isinstance(A, np.ndarray):
+                v = np.linalg.solve(A, b)
+            else:
+                raise RuntimeError('Unexpected program state. Exiting...')
+        else:
+            v, info = cg(A, b, rtol=1e-10)
+            if info != 0:
+                raise RuntimeError(f"CG failed with info={info}")
 
         # add dirichlet values on the boundary back in
-        v[boundary_idx, 0] = np.array([self.g_dir(self.triang._points[i]) for i in boundary_idx])
+        v[boundary_idx] = np.array([self.g_dir(self.triang._points[i]) for i in boundary_idx])
 
-        # return vector as 1D-array, not as column vector
-        # (b gets initialized with shape (n, 1) in _compute_A_b)
-        return v.reshape(v.shape[0],)
+        return v

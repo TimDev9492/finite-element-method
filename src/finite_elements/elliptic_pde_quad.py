@@ -1,10 +1,12 @@
 from typing import Tuple, Callable
 from src.utils.typing import VecNumMap, Vec2NumMap, Vector, VecMatrixMap, Matrix
 
-from src.utils.common import triangle_area
+from src.utils.common import time_function
 from src.mesh_tools.mesh_tools import TriangulationQuad
 
 import numpy as np
+import scipy.sparse as sparse
+from scipy.sparse.linalg import cg, spilu, LinearOperator
 
 class QuadraticFEMEllipticPDE:
     '''
@@ -18,6 +20,7 @@ class QuadraticFEMEllipticPDE:
             triang: TriangulationQuad,
             kappa: VecMatrixMap = lambda v: np.eye(2),
             g_dir: VecNumMap = lambda v: 0,
+            use_sparse=False,
     ):
         self.f = f
         self.triang = triang
@@ -27,7 +30,9 @@ class QuadraticFEMEllipticPDE:
         self.kappa = kappa
         self.g_dir = g_dir
 
-        # store points for quadrature fromula
+        self.use_sparse = use_sparse
+
+        # store points for quadrature formula
         self.xi_eta = np.array([
             [1/6, 1/6],
             [2/3, 1/6],
@@ -57,12 +62,13 @@ class QuadraticFEMEllipticPDE:
             np.linalg.solve(self.Z.T, A[2, :])
         ])
 
-    def _compute_A_b(self) -> Tuple[np.ndarray, np.ndarray]:
+    @time_function
+    def _compute_A_b(self) -> Tuple[sparse.csr_array | np.ndarray, np.ndarray]:
         '''
         Compute matrix A and vector b to solve Ax=b
         '''
         b = np.zeros(self.N)
-        A = np.zeros((self.N, self.N))
+        A = sparse.lil_matrix((self.N, self.N)) if self.use_sparse else np.zeros((self.N, self.N))
 
         # calculate phi_hat d_r phi and d_s phi
         phi = self._solve_right_matrix(np.array([
@@ -102,6 +108,17 @@ class QuadraticFEMEllipticPDE:
                 [x[0] - x[2], x[1] - x[0]],
             ])
 
+            Jk_grad = np.empty((3, 6, 2))
+            for q in range(3):
+                for j in range(6):
+                    Jk_grad[q, j] = Jk_inv_T @ np.array([dr_phi[q, j], ds_phi[q, j]])
+
+            kappa_of_Phi = [
+                self.kappa(Phi_k_of_xi_eta[0]),
+                self.kappa(Phi_k_of_xi_eta[1]),
+                self.kappa(Phi_k_of_xi_eta[2]),
+            ]
+
             a_k = np.zeros((6, 6))
             for i in range(6):
                 b_i_k = 0
@@ -110,16 +127,16 @@ class QuadraticFEMEllipticPDE:
                     # compute contribution to assembly matrix A
                     a_ij_k = abs(det_Jk) / 6 * (
                         np.dot(
-                            Jk_inv_T @ np.array([dr_phi[0, i], ds_phi[0, i]]),
-                            self.kappa(Phi_k_of_xi_eta[0]) @ Jk_inv_T @ np.array([dr_phi[0, j], ds_phi[0, j]])
+                            Jk_grad[0, i],
+                            kappa_of_Phi[0] @ Jk_grad[0, j]
                             ) +
                         np.dot(
-                            Jk_inv_T @ np.array([dr_phi[1, i], ds_phi[1, i]]),
-                            self.kappa(Phi_k_of_xi_eta[1]) @ Jk_inv_T @ np.array([dr_phi[1, j], ds_phi[1, j]])
+                            Jk_grad[1, i],
+                            kappa_of_Phi[1] @ Jk_grad[1, j]
                             ) +
                         np.dot(
-                            Jk_inv_T @ np.array([dr_phi[2, i], ds_phi[2, i]]),
-                            self.kappa(Phi_k_of_xi_eta[2]) @ Jk_inv_T @ np.array([dr_phi[2, j], ds_phi[2, j]])
+                            Jk_grad[2, i],
+                            kappa_of_Phi[2] @ Jk_grad[2, j]
                             )
                     )
                     a_k[i, j] = a_k[j, i] = a_ij_k
@@ -143,13 +160,14 @@ class QuadraticFEMEllipticPDE:
 
                 b[global_point_idx[i]] += b_i_k
 
+        if isinstance(A, sparse.lil_matrix):
+            A = A.tocsr()
         return (A, b)
     
-    def solve(self) -> Vector:
+    @time_function
+    def solve(self, use_preconditioner=True) -> Vector:
         '''
-        Compute the solution using np.linalg.solve
-
-        Note: Can be optimized by using sparse matrix A and cg-method for example
+        Compute the solution
         '''
         A, b = self._compute_A_b()
 
@@ -163,17 +181,28 @@ class QuadraticFEMEllipticPDE:
 
         boundary_values = np.array([self.g_dir(self.triang._points[i]) for i in boundary_idx])
 
-        A_ii = A[np.ix_(interior_idx, interior_idx)]
-        A_ib = A[np.ix_(interior_idx, boundary_idx)]
+        A_ii = A[interior_idx, :][:, interior_idx]
+        # A_ii = A[np.ix_(interior_idx, interior_idx)]
+        # A_ib = A[np.ix_(interior_idx, boundary_idx)]
 
         # remove boundary nodes
         # b_reduced = b[interior_idx] - A_ib @ boundary_values
         b_reduced = b[interior_idx]
 
         # solve reduced system
-        u_interior = np.linalg.solve(A_ii, b_reduced)
+        u_interior = None
+        if not self.use_sparse:
+            u_interior = np.linalg.solve(A_ii, b_reduced)
+        elif isinstance(A_ii, sparse.csr_matrix):
+            M = None
+            if use_preconditioner:
+                ilu = spilu(A_ii.tocsc())
+                M = LinearOperator(A_ii.shape, ilu.solve)
+            u_interior, info = cg(A_ii, b_reduced, M=M, rtol=1e-10)
+            if info != 0:
+                raise RuntimeError(f"CG failed with info={info}")
 
-        u = np.empty(self.N)
+        u = np.zeros(self.N)
         u[interior_idx] = u_interior
 
         # add dirichlet values on the boundary back in

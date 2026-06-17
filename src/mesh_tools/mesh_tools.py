@@ -97,7 +97,7 @@ class TriangulationQuad(Triangulation):
         return new_edges
 
     @staticmethod
-    def from_triangulation(triang: Triangulation) -> TriangulationQuad:
+    def from_triangulation(triang: Triangulation):
         # compute number of midpoints by counting every triangle edge
         #  -> every inner edge gets counted twice
         # and then double count the edges (neumann/dirichlet)

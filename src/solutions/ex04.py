@@ -84,14 +84,17 @@ def _test_problem_f(vec: Vector) -> np.ndarray | float:
 #     return 16*(x*x + y*y) - 5
 
 def _test_problem_g_dir(vec: Vector) -> np.ndarray | float:
-    vec = np.asarray(vec)
-    x, y = vec[..., 0], vec[..., 1]
-    on_gamma_1 = np.isclose(x*x + y*y, 1)
-    return np.where(
-        on_gamma_1,
-        np.exp(-x*x - 1),
-        np.exp(-x*x - 0.25)
-    )
+    # vec = np.asarray(vec)
+    # x, y = vec[..., 0], vec[..., 1]
+    # radius = x*x + y*y
+    # on_gamma_1 = radius > 0.75
+    # # on_gamma_1 = np.isclose(x*x + y*y, 1)
+    # return np.where(
+    #     on_gamma_1,
+    #     np.exp(-x*x - 1),
+    #     np.exp(-x*x - 0.25)
+    # )
+    return _test_problem_u(vec)
 # def _test_problem_g_dir(vec: Vector) -> np.ndarray | float:
 #     vec = np.asarray(vec)
 #     x, y = vec[..., 0], vec[..., 1]
@@ -309,13 +312,13 @@ def show_plots():
     work_prec_plot = fig.add_subplot(gs[1, 0])
 
     compute_conv_work_prec(
-        [f'assets/meshes/circular_ring_{no:02d}.msh' for no in range(4)],
+        [f'assets/meshes/circular_ring_{no:02d}.msh' for no in range(7)],
         conv_plot,
         work_prec_plot,
     )
 
     plt.tight_layout()
     plt.savefig('figures/ex04ef.pdf')
-    # plt.show()
+    plt.show()
 
 show_plots()

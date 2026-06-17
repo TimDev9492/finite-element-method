@@ -122,7 +122,7 @@ class QuadraticFEMEllipticPDE:
                             self.kappa(Phi_k_of_xi_eta[2]) @ Jk_inv_T @ np.array([dr_phi[2, j], ds_phi[2, j]])
                             )
                     )
-                    a_k[i, j] = a_k[i, j] = a_ij_k
+                    a_k[i, j] = a_k[j, i] = a_ij_k
                     A[global_point_idx[i], global_point_idx[j]] += a_ij_k
 
                     # subtract correction term for dirichlet boundary condition

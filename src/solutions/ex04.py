@@ -162,7 +162,8 @@ def compute_conv_work_prec(paths: list[str], conv_ax: Axes, work_prec_ax: Axes):
             triang,
             _test_problem_kappa,
             _test_problem_kappa_zero,
-            _test_problem_g_dir
+            _test_problem_g_dir,
+            use_sparse=True,
         )
         start = perf_counter_ns()
         linear_solution = linear_solver.solve()
@@ -283,8 +284,8 @@ def show_plots():
 
     compute_conv_work_prec(
         # implementation allows for loading all meshes, runtime on my machine:
-        #  - meshes 00 to 06: ~36s  (half a minute)
-        #  - meshes 00 to 08: ~195s (3+ minutes)
+        #  - meshes 00 to 06: ~40s
+        #  - meshes 00 to 08: ~180s (3 minutes)
         [f'assets/meshes/circular_ring_{no:02d}.msh' for no in range(6+1)],
         conv_plot,
         work_prec_plot,
@@ -292,6 +293,6 @@ def show_plots():
 
     plt.tight_layout()
     plt.savefig('figures/ex04ef.pdf')
-    # plt.show()
+    plt.show()
 
 show_plots()

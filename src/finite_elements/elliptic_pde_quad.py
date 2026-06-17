@@ -20,7 +20,7 @@ class QuadraticFEMEllipticPDE:
             triang: TriangulationQuad,
             kappa: VecMatrixMap = lambda v: np.eye(2),
             g_dir: VecNumMap = lambda v: 0,
-            use_sparse=False,
+            use_sparse: bool = False,
     ):
         self.f = f
         self.triang = triang

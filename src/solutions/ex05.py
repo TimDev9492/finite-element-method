@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.axes import Axes
+from pathlib import Path
 from src.finite_elements.elliptic_pde_linear import LinearFEMEllipticPDE
 from src.utils.common import triangle_area
 from src.mesh_tools.mesh_tools import Triangulation, read_msh
@@ -98,6 +99,9 @@ def plot_finite_elements_problem(
 
 
 def show_plots():
+    # create figures directory
+    Path('figures/').mkdir(parents=True, exist_ok=True)
+
     fig = plt.figure()
     ax = fig.add_subplot(111)
     skyline_mesh_filename = 'assets/meshes/skyline.msh'

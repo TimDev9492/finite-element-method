@@ -1,3 +1,4 @@
+from pathlib import Path
 import gmsh
 
 '''
@@ -219,6 +220,10 @@ def write_skyline(width=40.0, height=30.0, h_min=0.1, h_max=0.5, output_file="fr
 
     # Generate a triangular two-dimensional mesh.
     gmsh.model.mesh.generate(2)
+
+    # Create parent directories if they don't exist
+    Path(output_file).parent.mkdir(parents=True, exist_ok=True)
+    
     gmsh.write(output_file)
     gmsh.finalize()
 
